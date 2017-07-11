@@ -13,8 +13,10 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { Main } from './components';
 
 ReactDOM.render(
-  <Router>
-    <Main />
-  </Router>,
+  <Provider store={store}>
+    <Router>
+      <Main />
+    </Router>
+  </Provider>,
   document.getElementById('app')
 );
