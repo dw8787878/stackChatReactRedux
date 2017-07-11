@@ -1669,7 +1669,7 @@ var _prodInvariant = __webpack_require__(3),
     _assign = __webpack_require__(5);
 
 var CallbackQueue = __webpack_require__(100);
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 var ReactFeatureFlags = __webpack_require__(105);
 var ReactReconciler = __webpack_require__(25);
 var Transaction = __webpack_require__(40);
@@ -1958,7 +1958,7 @@ module.exports = ReactCurrentOwner;
 
 var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 
 var emptyFunction = __webpack_require__(12);
 var warning = __webpack_require__(2);
@@ -2431,6 +2431,240 @@ module.exports = DOMProperty;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+exports.updateName = updateName;
+exports.getMessage = getMessage;
+exports.getMessages = getMessages;
+exports.getChannel = getChannel;
+exports.writeChannelName = writeChannelName;
+exports.writeMessage = writeMessage;
+exports.getChannels = getChannels;
+exports.fetchMessages = fetchMessages;
+exports.fetchChannels = fetchChannels;
+exports.postMessage = postMessage;
+exports.postChannel = postChannel;
+
+var _axios = __webpack_require__(147);
+
+var _axios2 = _interopRequireDefault(_axios);
+
+var _redux = __webpack_require__(76);
+
+var _reduxLogger = __webpack_require__(339);
+
+var _reduxLogger2 = _interopRequireDefault(_reduxLogger);
+
+var _reduxThunk = __webpack_require__(340);
+
+var _reduxThunk2 = _interopRequireDefault(_reduxThunk);
+
+var _reduxDevtoolsExtension = __webpack_require__(335);
+
+var _socket = __webpack_require__(175);
+
+var _socket2 = _interopRequireDefault(_socket);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+// INITIAL STATE
+
+var initialState = {
+  messages: [],
+  name: 'Reggie',
+  newMessageEntry: '',
+  channels: [],
+  newChannelEntry: ''
+};
+
+// ACTION TYPES
+
+var UPDATE_NAME = 'UPDATE_NAME';
+
+var GET_CHANNELS = 'GET_CHANNELS';
+var GET_MESSAGE = 'GET_MESSAGE';
+var GET_MESSAGES = 'GET_MESSAGES';
+var GET_CHANNEL = 'GET_CHANNEL';
+
+var WRITE_MESSAGE = 'WRITE_MESSAGE';
+var WRITE_CHANNEL_NAME = 'WRITE_CHANNEL_NAME';
+
+// ACTION CREATORS
+
+function updateName(name) {
+  var action = { type: UPDATE_NAME, name: name };
+  return action;
+}
+
+function getMessage(message) {
+  var action = { type: GET_MESSAGE, message: message };
+  return action;
+}
+
+function getMessages(messages) {
+  var action = { type: GET_MESSAGES, messages: messages };
+  return action;
+}
+
+function getChannel(channel) {
+  var action = { type: GET_CHANNEL, channel: channel };
+  return action;
+}
+
+function writeChannelName(channelName) {
+  var action = { type: WRITE_CHANNEL_NAME, channelName: channelName };
+  return action;
+}
+
+function writeMessage(content) {
+  var action = { type: WRITE_MESSAGE, content: content };
+  return action;
+}
+
+function getChannels(channels) {
+  var action = { type: GET_CHANNELS, channels: channels };
+  return action;
+}
+
+// THUNK CREATORS
+
+function fetchMessages() {
+
+  return function thunk(dispatch) {
+    return _axios2.default.get('/api/messages').then(function (res) {
+      return res.data;
+    }).then(function (messages) {
+      var action = getMessages(messages);
+      dispatch(action);
+    });
+  };
+}
+
+function fetchChannels() {
+
+  return function thunk(dispatch) {
+    return _axios2.default.get('/api/channels').then(function (res) {
+      return res.data;
+    }).then(function (channels) {
+      var action = getChannels(channels);
+      dispatch(action);
+    });
+  };
+}
+
+function postMessage(message) {
+
+  return function thunk(dispatch) {
+    return _axios2.default.post('/api/messages', message).then(function (res) {
+      return res.data;
+    }).then(function (newMessage) {
+      var action = getMessage(newMessage);
+      dispatch(action);
+      _socket2.default.emit('new-message', newMessage);
+    });
+  };
+}
+
+function postChannel(channel) {
+
+  return function thunk(dispatch) {
+    return _axios2.default.post('/api/channels', channel).then(function (res) {
+      return res.data;
+    }).then(function (newChannel) {
+      var action = getChannel(newChannel);
+      dispatch(action);
+    });
+  };
+}
+
+// REDUCER
+
+/**
+ * Whoa! What is this { ...state } business?!?
+ * This is the spread operator like we've seen before - but this time, we're using it with an Object!
+ * When we use the spread operator on an object, it extracts all of the key-value pairs on that object into a new object!
+ * Sound familiar? It acts like Object.assign!
+ *
+ * For example:
+ *
+ *    const obj1 = { a: 1 };
+ *    const obj2 = { ...obj1, b: 2  }
+ *    console.log(obj2) // { a: 1, b: 2 }
+ *
+ * This is the same result we would have gotten if we had said:
+ *
+ *    const obj2 = Object.assign({}, obj1, { b: 2 })
+ *
+ * However, it's much less verbose!
+ * Is there anything the spread operator DOESN'T do?!?
+ *
+ * Note: this is still an experimental language feature (though it is on its way to becoming official).
+ * We can use it now because we are using a special babel plugin with webpack (babel-preset-stage-2)!
+ */
+function reducer() {
+  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
+  var action = arguments[1];
+
+
+  switch (action.type) {
+
+    case UPDATE_NAME:
+      return _extends({}, state, {
+        name: action.name
+      });
+
+    case GET_MESSAGES:
+      return _extends({}, state, {
+        messages: action.messages
+      });
+
+    case GET_MESSAGE:
+      return _extends({}, state, {
+        messages: [].concat(_toConsumableArray(state.messages), [action.message])
+      });
+
+    case GET_CHANNELS:
+      return _extends({}, state, {
+        channels: action.channels
+      });
+
+    case GET_CHANNEL:
+      return _extends({}, state, {
+        channels: [].concat(_toConsumableArray(state.channels), [action.channel])
+      });
+
+    case WRITE_CHANNEL_NAME:
+      return _extends({}, state, {
+        newChannelEntry: action.channelName
+      });
+
+    case WRITE_MESSAGE:
+      return _extends({}, state, {
+        newMessageEntry: action.content
+      });
+
+    default:
+      return state;
+  }
+}
+
+var store = (0, _redux.createStore)(reducer, (0, _reduxDevtoolsExtension.composeWithDevTools)((0, _redux.applyMiddleware)(_reduxThunk2.default, (0, _reduxLogger2.default)())));
+
+exports.default = store;
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
@@ -2545,7 +2779,7 @@ module.exports = PooledClass;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2892,7 +3126,7 @@ module.exports = ReactElement;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2958,200 +3192,6 @@ if (process.env.NODE_ENV !== 'production') {
 module.exports = warning;
 
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-exports.updateName = updateName;
-exports.getMessage = getMessage;
-exports.getMessages = getMessages;
-exports.writeMessage = writeMessage;
-exports.getChannels = getChannels;
-exports.fetchMessages = fetchMessages;
-exports.fetchChannels = fetchChannels;
-exports.postMessage = postMessage;
-
-var _axios = __webpack_require__(147);
-
-var _axios2 = _interopRequireDefault(_axios);
-
-var _redux = __webpack_require__(76);
-
-var _reduxLogger = __webpack_require__(339);
-
-var _reduxLogger2 = _interopRequireDefault(_reduxLogger);
-
-var _reduxThunk = __webpack_require__(340);
-
-var _reduxThunk2 = _interopRequireDefault(_reduxThunk);
-
-var _reduxDevtoolsExtension = __webpack_require__(335);
-
-var _socket = __webpack_require__(175);
-
-var _socket2 = _interopRequireDefault(_socket);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-// INITIAL STATE
-
-var initialState = {
-  messages: [],
-  name: 'Reggie',
-  newMessageEntry: '',
-  channels: []
-};
-
-// ACTION TYPES
-
-var UPDATE_NAME = 'UPDATE_NAME';
-var GET_MESSAGE = 'GET_MESSAGE';
-var GET_MESSAGES = 'GET_MESSAGES';
-var WRITE_MESSAGE = 'WRITE_MESSAGE';
-var GET_CHANNELS = 'GET_CHANNELS';
-
-// ACTION CREATORS
-
-function updateName(name) {
-  var action = { type: UPDATE_NAME, name: name };
-  return action;
-}
-
-function getMessage(message) {
-  var action = { type: GET_MESSAGE, message: message };
-  return action;
-}
-
-function getMessages(messages) {
-  var action = { type: GET_MESSAGES, messages: messages };
-  return action;
-}
-
-function writeMessage(content) {
-  var action = { type: WRITE_MESSAGE, content: content };
-  return action;
-}
-
-function getChannels(channels) {
-  var action = { type: GET_CHANNELS, channels: channels };
-  return action;
-}
-
-// THUNK CREATORS
-
-function fetchMessages() {
-
-  return function thunk(dispatch) {
-    return _axios2.default.get('/api/messages').then(function (res) {
-      return res.data;
-    }).then(function (messages) {
-      var action = getMessages(messages);
-      dispatch(action);
-    });
-  };
-}
-
-function fetchChannels() {
-
-  return function thunk(dispatch) {
-    return _axios2.default.get('/api/channels').then(function (res) {
-      return res.data;
-    }).then(function (channels) {
-      var action = getChannels(channels);
-      dispatch(action);
-    });
-  };
-}
-
-function postMessage(message) {
-
-  return function thunk(dispatch) {
-    return _axios2.default.post('/api/messages', message).then(function (res) {
-      return res.data;
-    }).then(function (newMessage) {
-      var action = getMessage(newMessage);
-      dispatch(action);
-      _socket2.default.emit('new-message', newMessage);
-    });
-  };
-}
-
-// REDUCER
-
-/**
- * Whoa! What is this { ...state } business?!?
- * This is the spread operator like we've seen before - but this time, we're using it with an Object!
- * When we use the spread operator on an object, it extracts all of the key-value pairs on that object into a new object!
- * Sound familiar? It acts like Object.assign!
- *
- * For example:
- *
- *    const obj1 = { a: 1 };
- *    const obj2 = { ...obj1, b: 2  }
- *    console.log(obj2) // { a: 1, b: 2 }
- *
- * This is the same result we would have gotten if we had said:
- *
- *    const obj2 = Object.assign({}, obj1, { b: 2 })
- *
- * However, it's much less verbose!
- * Is there anything the spread operator DOESN'T do?!?
- *
- * Note: this is still an experimental language feature (though it is on its way to becoming official).
- * We can use it now because we are using a special babel plugin with webpack (babel-preset-stage-2)!
- */
-function reducer() {
-  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
-  var action = arguments[1];
-
-
-  switch (action.type) {
-
-    case UPDATE_NAME:
-      return _extends({}, state, {
-        name: action.name
-      });
-
-    case GET_MESSAGES:
-      return _extends({}, state, {
-        messages: action.messages
-      });
-
-    case GET_MESSAGE:
-      return _extends({}, state, {
-        messages: [].concat(_toConsumableArray(state.messages), [action.message])
-      });
-
-    case WRITE_MESSAGE:
-      return _extends({}, state, {
-        newMessageEntry: action.content
-      });
-
-    case GET_CHANNELS:
-      return _extends({}, state, {
-        channels: action.channels
-      });
-
-    default:
-      return state;
-  }
-}
-
-var store = (0, _redux.createStore)(reducer, (0, _reduxDevtoolsExtension.composeWithDevTools)((0, _redux.applyMiddleware)(_reduxThunk2.default, (0, _reduxLogger2.default)())));
-
-exports.default = store;
 
 /***/ }),
 /* 23 */
@@ -4086,7 +4126,7 @@ var _assign = __webpack_require__(5);
 var ReactBaseClasses = __webpack_require__(127);
 var ReactChildren = __webpack_require__(324);
 var ReactDOMFactories = __webpack_require__(325);
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 var ReactPropTypes = __webpack_require__(327);
 var ReactVersion = __webpack_require__(329);
 
@@ -7176,7 +7216,7 @@ var locationsAreEqual = exports.locationsAreEqual = function locationsAreEqual(a
 
 exports.__esModule = true;
 
-var _warning = __webpack_require__(21);
+var _warning = __webpack_require__(22);
 
 var _warning2 = _interopRequireDefault(_warning);
 
@@ -9174,7 +9214,7 @@ function warning(message) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning__ = __webpack_require__(22);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_warning__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_invariant__ = __webpack_require__(29);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_invariant___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_invariant__);
@@ -11686,7 +11726,7 @@ var _prodInvariant = __webpack_require__(3);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 
 var invariant = __webpack_require__(1);
 
@@ -14411,7 +14451,7 @@ Link.contextTypes = {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning__ = __webpack_require__(22);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_warning___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_warning__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_react__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_react___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_react__);
@@ -14750,7 +14790,7 @@ module.exports = REACT_ELEMENT_TYPE;
 
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactComponentTreeHook = __webpack_require__(10);
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 var checkReactTypeSpec = __webpack_require__(330);
 
@@ -17753,7 +17793,7 @@ var _react2 = _interopRequireDefault(_react);
 
 var _reactRouterDom = __webpack_require__(45);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -17885,7 +17925,7 @@ var _NewChannelEntry = __webpack_require__(171);
 
 var _NewChannelEntry2 = _interopRequireDefault(_NewChannelEntry);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -18014,7 +18054,7 @@ var _NewMessageEntry = __webpack_require__(172);
 
 var _NewMessageEntry2 = _interopRequireDefault(_NewMessageEntry);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -18099,7 +18139,7 @@ var _react = __webpack_require__(4);
 
 var _react2 = _interopRequireDefault(_react);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -18232,49 +18272,10 @@ exports.default = Navbar;
 
 /***/ }),
 /* 171 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, exports) {
 
 "use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = NewChannelEntry;
-
-var _react = __webpack_require__(4);
-
-var _react2 = _interopRequireDefault(_react);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function NewChannelEntry(props) {
-  return _react2.default.createElement(
-    "form",
-    null,
-    _react2.default.createElement(
-      "div",
-      { className: "form-group" },
-      _react2.default.createElement(
-        "label",
-        { htmlFor: "name" },
-        "Create a Channel"
-      ),
-      _react2.default.createElement("input", { className: "form-control", type: "text", name: "channelName", placeholder: "Enter channel name" })
-    ),
-    _react2.default.createElement(
-      "div",
-      { className: "form-group" },
-      _react2.default.createElement(
-        "button",
-        { type: "submit", className: "btn btn-default" },
-        "Create Channel"
-      )
-    )
-  );
-}
-
-/** Write your `connect` component below! **/
+throw new Error("Module build failed: SyntaxError: Only one default export allowed per module. (32:0)\n\n\u001b[0m \u001b[90m 30 | \u001b[39m\u001b[36mconst\u001b[39m \u001b[33mContainer\u001b[39m \u001b[33m=\u001b[39m connect(mapStateToProps\u001b[33m,\u001b[39m mapDispatchToProps)(\u001b[33mNewChannelEntry\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 31 | \u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 32 | \u001b[39m\u001b[36mexport\u001b[39m \u001b[36mdefault\u001b[39m \u001b[33mContainer\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m    | \u001b[39m\u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 33 | \u001b[39m\n \u001b[90m 34 | \u001b[39m\n \u001b[90m 35 | \u001b[39m\u001b[0m\n");
 
 /***/ }),
 /* 172 */
@@ -18293,7 +18294,7 @@ var _react = __webpack_require__(4);
 
 var _react2 = _interopRequireDefault(_react);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -18475,7 +18476,7 @@ __webpack_require__(144);
 
 var _reactRedux = __webpack_require__(79);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -18521,7 +18522,7 @@ var _socket = __webpack_require__(345);
 
 var _socket2 = _interopRequireDefault(_socket);
 
-var _store = __webpack_require__(22);
+var _store = __webpack_require__(19);
 
 var _store2 = _interopRequireDefault(_store);
 
@@ -23344,7 +23345,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _warning = __webpack_require__(21);
+var _warning = __webpack_require__(22);
 
 var _warning2 = _interopRequireDefault(_warning);
 
@@ -23655,7 +23656,7 @@ exports.__esModule = true;
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _warning = __webpack_require__(21);
+var _warning = __webpack_require__(22);
 
 var _warning2 = _interopRequireDefault(_warning);
 
@@ -23987,7 +23988,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _warning = __webpack_require__(21);
+var _warning = __webpack_require__(22);
 
 var _warning2 = _interopRequireDefault(_warning);
 
@@ -26695,7 +26696,7 @@ module.exports = EnterLeaveEventPlugin;
 
 var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 
 var getTextContentAccessor = __webpack_require__(115);
 
@@ -31408,7 +31409,7 @@ var _assign = __webpack_require__(5);
 
 var EventListener = __webpack_require__(88);
 var ExecutionEnvironment = __webpack_require__(8);
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 var ReactDOMComponentTree = __webpack_require__(6);
 var ReactUpdates = __webpack_require__(15);
 
@@ -32325,7 +32326,7 @@ module.exports = ReactPropTypeLocationNames;
 var _assign = __webpack_require__(5);
 
 var CallbackQueue = __webpack_require__(100);
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 var ReactBrowserEventEmitter = __webpack_require__(38);
 var ReactInputSelection = __webpack_require__(107);
 var ReactInstrumentation = __webpack_require__(13);
@@ -32602,7 +32603,7 @@ module.exports = ReactRef;
 
 var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(19);
+var PooledClass = __webpack_require__(20);
 var Transaction = __webpack_require__(40);
 var ReactInstrumentation = __webpack_require__(13);
 var ReactServerUpdateQueue = __webpack_require__(268);
@@ -36119,7 +36120,7 @@ StaticRouter.childContextTypes = {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_react___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_react__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_prop_types__ = __webpack_require__(9);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_prop_types___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_prop_types__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_warning__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_warning__ = __webpack_require__(22);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_warning___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_warning__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__matchPath__ = __webpack_require__(74);
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -36873,7 +36874,7 @@ module.exports = PooledClass;
 
 
 var PooledClass = __webpack_require__(323);
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 var emptyFunction = __webpack_require__(12);
 var traverseAllChildren = __webpack_require__(334);
@@ -37068,7 +37069,7 @@ module.exports = ReactChildren;
 
 
 
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 /**
  * Create a factory that creates HTML tag elements.
@@ -37274,7 +37275,7 @@ module.exports = ReactPropTypeLocationNames;
 
 
 
-var _require = __webpack_require__(20),
+var _require = __webpack_require__(21),
     isValidElement = _require.isValidElement;
 
 var factory = __webpack_require__(97);
@@ -37435,7 +37436,7 @@ module.exports = checkReactTypeSpec;
 var _require = __webpack_require__(127),
     Component = _require.Component;
 
-var _require2 = __webpack_require__(20),
+var _require2 = __webpack_require__(21),
     isValidElement = _require2.isValidElement;
 
 var ReactNoopUpdateQueue = __webpack_require__(130);
@@ -37487,7 +37488,7 @@ module.exports = getNextDebugID;
 
 var _prodInvariant = __webpack_require__(27);
 
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 var invariant = __webpack_require__(1);
 
